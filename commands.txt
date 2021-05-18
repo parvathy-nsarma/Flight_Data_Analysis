@@ -1,0 +1,320 @@
+﻿This all the command used to run Oozie workflow
+
+hadoop cluster installation
+---------------------------------------------------------
+1. Create ~/.ssh/config on namenode with contents below:
+Host 0.0.0.0
+  HostName ec2-52-54-224-247.compute-1.amazonaws.com
+  User ubuntu
+  IdentityFile ~/.ssh/hadoop-clusterkeypair.pem
+Host hadoop-master
+  HostName ec2-52-54-224-247.compute-1.amazonaws.com
+  User ubuntu
+  IdentityFile ~/.ssh/hadoop-clusterkeypair.pem
+Host DataNode001
+  HostName ec2-54-237-170-91.compute-1.amazonaws.com
+  User ubuntu
+  IdentityFile ~/.ssh/hadoop-clusterkeypair.pem
+Host DataNode002
+  HostName ec2-3-92-183-206.compute-1.amazonaws.com
+  User ubuntu
+  IdentityFile ~/.ssh/hadoop-clusterkeypair.pem
+Host DataNode003
+  HostName ec2-184-73-84-219.compute-1.amazonaws.com
+  User ubuntu
+  IdentityFile ~/.ssh/hadoop-clusterkeypair.pem
+
+2. Execute following commands on namenode:
+  sudo rm -rf ~/.ssh/id_rsa*
+  sudo rm -rf ~/.ssh/known_hosts
+
+  ssh-keygen -f ~/.ssh/id_rsa -t rsa -P ""
+
+3. Create bigdata.sh and append the commands below
+export NameNodeDNS="ec2-18-218-165-62.us-east-2.compute.amazonaws.com"
+export DataNode001DNS="ec2-13-58-51-176.us-east-2.compute.amazonaws.com"
+export DataNode002DNS="ec2-18-217-252-152.us-east-2.compute.amazonaws.com"
+export DataNode003DNS="ec2-18-218-96-134.us-east-2.compute.amazonaws.com"
+export NameNodeIP="172.31.31.127"
+export DataNode001IP="172.31.30.70"
+export DataNode002IP="172.31.24.96"
+export DataNode003IP="172.31.88.102"
+export IdentityFile="~/.ssh/hadoop-clusterkeypair.pem"
+echo "# AmazonEC2 Variables START" | sudo tee --append /etc/profile.d/bigdata.sh > /dev/null
+echo "export NameNodeDNS=\"${NameNodeDNS}\"" | sudo tee --append /etc/profile.d/bigdata.sh > /dev/null
+echo "export DataNode001DNS=\"${DataNode001DNS}\"" | sudo tee --append /etc/profile.d/bigdata.sh > /dev/null
+echo "export DataNode002DNS=\"${DataNode002DNS}\"" | sudo tee --append /etc/profile.d/bigdata.sh > /dev/null
+echo "export DataNode003DNS=\"${DataNode003DNS}\"" | sudo tee --append /etc/profile.d/bigdata.sh > /dev/null
+echo "" | sudo tee --append /etc/profile.d/bigdata.sh > /dev/null
+echo -e "export NameNodeIP=\"${NameNodeIP}\"" | sudo tee --append /etc/profile.d/bigdata.sh > /dev/null
+echo -e "export DataNode001IP=\"${DataNode001IP}\"" | sudo tee --append /etc/profile.d/bigdata.sh > /dev/null
+echo -e "export DataNode002IP=\"${DataNode002IP}\"" | sudo tee --append /etc/profile.d/bigdata.sh > /dev/null
+echo -e "export DataNode003IP=\"${DataNode003IP}\"" | sudo tee --append /etc/profile.d/bigdata.sh > /dev/null
+echo -e "export IdentityFile=\"${IdentityFile}\"" | sudo tee --append /etc/profile.d/bigdata.sh > /dev/null
+echo -e "# AmazonEC2 Variables END" | sudo tee --append /etc/profile.d/bigdata.sh > /dev/null
+
+
+4. Run each nodes (Master and Slaves) one at a time on the matching instance
+publichost=${NameNodeDNS}     	# for master
+publichost=${DataNode001DNS}	# for slave1
+publichost=${DataNode002DNS}	# for slave2
+publichost=${DataNode003DNS}	# for slave3
+
+sudo hostname ${publichost}
+
+sudo rm -rf /etc/hostname
+echo -e "${publichost}" | sudo tee --append /etc/hostname > /dev/null
+sudo chown root /etc/hostname
+
+5. Create and append /etc/hosts 
+sudo rm -rf /etc/hosts
+echo -e "127.0.0.1\tlocalhost" | sudo tee --append /etc/hosts > /dev/null
+echo -e "127.0.1.1\t${publichost}" | sudo tee --append /etc/hosts > /dev/null
+echo -e "${NameNodeIP}\thadoop-master" | sudo tee --append /etc/hosts > /dev/null
+echo -e "${DataNode001IP}\tDataNode001" | sudo tee --append /etc/hosts > /dev/null
+echo -e "${DataNode002IP}\tDataNode002" | sudo tee --append /etc/hosts > /dev/null
+echo -e "${DataNode003IP}\tDataNode003" | sudo tee --append /etc/hosts > /dev/null
+echo -e "\n# The following lines are desirable for IPv6 capable hosts" | sudo tee --append /etc/hosts > /dev/null
+echo -e "::1 ip6-localhost ip6-loopback" | sudo tee --append /etc/hosts > /dev/null
+echo -e "fe00::0 ip6-localnet" | sudo tee --append /etc/hosts > /dev/null
+echo -e "ff00::0 ip6-mcastprefix" | sudo tee --append /etc/hosts > /dev/null
+echo -e "ff02::1 ip6-allnodes" | sudo tee --append /etc/hosts > /dev/null
+echo -e "ff02::2 ip6-allrouters" | sudo tee --append /etc/hosts > /dev/null
+echo -e "ff02::3 ip6-allhosts" | sudo tee --append /etc/hosts > /dev/null
+sudo chown root /etc/hosts
+
+
+
+Java installion on all nodes
+******************************
+1. Install jdk-8:
+   sudo apt-get -y update
+   sudo apt-get -y install default-jdk
+
+2. Download and install hadoop-2.9.2
+   wget http://apache.mirrors.tds.net/hadoop/common/hadoop-2.9.2/hadoop-2.9.2.tar.gz -P ~/Downloads
+   sudo tar zxvf ~/Downloads/hadoop-* -C /usr/local
+   sudo mv /usr/local/hadoop-* /usr/local/hadoop
+
+3. Environmental Variables
+
+echo "# JAVA Variables START" | sudo tee --append /etc/profile.d/bigdata.sh > /dev/null
+echo "export JAVA_HOME=/usr/lib/jvm/default-java" | sudo tee --append /etc/profile.d/bigdata.sh > /dev/null
+echo "PATH=\$PATH:\$JAVA_HOME/bin" | sudo tee --append /etc/profile.d/bigdata.sh > /dev/null
+echo "# JAVA Variables END" | sudo tee --append /etc/profile.d/bigdata.sh > /dev/null
+
+4.All nodes configuration (common)
+
+   (a) $HADOOP_CONF_DIR/hadoop-env.sh
+
+   # The java implementation to use.
+   export JAVA_HOME=/usr
+
+   (b) $HADOOP_CONF_DIR/core-site.xml
+
+   <configuration>
+   <property>
+     <name>fs.defaultFS</name>
+     <value>hdfs://namenode_public_dns:9000</value>
+   </property>
+   </configuration>
+
+   (c) $HADOOP_CONF_DIR/yarn-site.xml
+
+    <configuration>
+    <! — Site specific YARN configuration properties →
+    <property>
+      <name>yarn.nodemanager.aux-services</name>
+      <value>mapreduce_shuffle</value>
+    </property> 
+    <property>
+      <name>yarn.nodemanager.aux-services.mapreduce.shuffle.class</name>
+      <value>org.apache.hadoop.mapred.ShuffleHandler</value>
+    </property>
+    <property>
+      <name>yarn.resourcemanager.hostname</name>
+      <value>namenode_public_dns</value>
+    </property>
+    </configuration>
+
+   (d) $HADOOP_CONF_DIR/mapred-site.xml
+
+   <configuration>
+   <property>
+     <name>mapreduce.jobtracker.address</name>
+     <value>namenode_public_dns:54311</value>
+   </property>
+   <property>
+     <name>mapreduce.framework.name</name>
+     <value>yarn</value>
+   </property>
+   </configuration>
+
+5. Datanodes configuration 
+   (a) $HADOOP_CONF_DIR/hdfs-site.xml
+
+  <configuration>
+  <property>
+    <name>dfs.replication</name>
+    <value>2</value>
+  </property>
+  <property>
+    <name>dfs.namenode.name.dir</name>
+    <value>file:///usr/local/hadoop/hadoop_data/hdfs/namenode</value>
+  </property>
+  <property>
+    <name>dfs.datanode.data.dir</name>
+    <value>file:///usr/local/hadoop/hadoop_data/hdfs/datanode</value>
+  </property>
+  </configuration>
+ 
+   (b) Create datanode directory
+`  
+       sudo mkdir -p $HADOOP_HOME/hadoop_data/hdfs/datanode
+       sudo chown -R ubuntu $HADOOP_HOME
+
+7. Hadoop Cluster 
+hdfs namenode -format
+start-dfs.sh
+start-yarn.sh
+$HADOOP_HOME/sbin/mr-jobhistory-daemon.sh start historyserver
+
+
+
+Oozie installation and build
+****************************
+1. install maven
+
+sudo apt-get install maven
+Download Oozie-4.3.1
+
+2. Download Oozie and install oozie
+wget https://archive.apache.org/dist/oozie/4.3.1/oozie-4.3.1.tar.gz
+sudo tar xvzf oozie-4.3.1.tar.gz
+
+3. go to oozie-4.1.0
+cd oozie-4.1.0
+
+4. sudo bin/mkdistro.sh -DskipTests -Dhadoopversion=2.9.2
+
+5. Create directoy Oozie.4.3.1
+
+mkdir ~/oozie-4.1
+cp -R distro/target/oozie-4.3.1-distro/
+cp -R oozie-4.3.1 ~/oozie-4.3.1
+
+6. Edit /etc/profile
+
+    export OOZIE_VERSION=4.3.1
+    export OOZIE_HOME=/home/ubuntu/oozie-4.3
+    export PATH=$PATH:$OOZIE_HOME/bin
+
+source /etc/profile
+7. Enable web console for oozie
+cd $OOZIE_HOME
+
+mkdir libext
+cd
+cp ~/oozie-4.3/hadooplibs/target/oozie-4.3.1-hadooplibs.tar.gz .
+
+tar -xzvf oozie-4.3.1-hadooplibs.tar.gz
+
+cp oozie-4.3.1/hadooplibs/hadooplib-2.9.2.oozie-4.3.1/* libext
+
+cd libext/
+
+wget http://archive.cloudera.com/gplextras/misc/ext-2.2.zip
+
+8. Configure the hadoop cluster in hadoop core-site.xml with proxyuser.
+  <!-- OOZIE -->
+  <property>
+      <name>hadoop.proxyuser.ubuntu.hosts</name>
+      <value>*</value>
+  </property>
+  <property>
+      <name>hadoop.proxyuser.ubuntu.groups</name>
+      <value>*</value>
+  </property>
+9. restart the hadoop cluster
+
+sudo apt-get install unzip
+
+sudo apt-get intall zip
+
+oozie-setup.sh prepare-war
+
+10. Create Sharelib Directory on HDFS
+hdfs getconf -confKey fs.defaultFS
+output should be 
+
+hdfs://hadoop-master:9000
+oozie-setup.sh sharelib create -fs hdfs://hadoop-master:9000
+
+setting CATALINA_OPTS="$CATALINA_OPTS -Xmx1024m"
+log4j:WARN No appenders could be found for logger (org.apache.hadoop.util.Shell).
+log4j:WARN Please initialize the log4j system properly.
+log4j:WARN See http://logging.apache.org/log4j/1.2/faq.html#noconfig for more info.
+SLF4J: Class path contains multiple SLF4J bindings.
+SLF4J: Found binding in [jar:file:/home/ubuntu/oozie-4.1/libtools/slf4j-simple-1.6.6.jar!/org/slf4j/impl/StaticLoggerBinder.class]
+SLF4J: Found binding in [jar:file:/home/ubuntu/oozie-4.1/libtools/slf4j-log4j12-1.6.6.jar!/org/slf4j/impl/StaticLoggerBinder.class]
+SLF4J: Found binding in [jar:file:/home/ubuntu/oozie-4.1/libext/slf4j-log4j12-1.6.6.jar!/org/slf4j/impl/StaticLoggerBinder.class]
+SLF4J: See http://www.slf4j.org/codes.html#multiple_bindings for an explanation.
+SLF4J: Actual binding is of type [org.slf4j.impl.SimpleLoggerFactory]
+the destination path for sharelib is: /user/ubuntu/share/lib/lib_2019121306026
+
+10. Updade Oozie-site.xml in the Oozie directory (4.3.1)
+
+<property>
+        <name>oozie.service.HadoopAccessorService.hadoop.configurations</name>
+        <value>*=/usr/local/hadoop/etc/hadoop</value>
+        <description>
+            Comma separated AUTHORITY=HADOOP_CONF_DIR, where AUTHORITY is the HOST:PORT of
+            the Hadoop service (JobTracker, HDFS). The wildcard '*' configuration is
+            used when there is no exact match for an authority. The HADOOP_CONF_DIR contains
+            the relevant Hadoop *-site.xml files. If the path is relative is looked within
+            the Oozie configuration directory; though the path can be absolute (i.e. to point
+            to Hadoop client conf/ directories in the local filesystem.
+        </description>
+    </property>
+
+    <property>
+        <name>oozie.service.WorkflowAppService.system.libpath</name>
+        <value>/user/ubuntu/share/lib</value>
+        <description>
+            System library path to use for workflow applications.
+            This path is added to workflow application if their job properties sets
+            the property 'oozie.use.system.libpath' to true.
+        </description>
+    </property>
+11. Create Oozie database 
+
+ooziedb.sh create -sqlfile oozie.sql -run
+
+12. Start Oozie service
+
+oozied.sh start
+
+13. Verify status
+
+oozie admin --oozie http://localhost:11000/oozie -status
+14. Compile map reduce java program
+
+javac -classpath $HADOOP_HOME/share/hadoop/common/hadoop-common-2.9.2.jar:$HADOOP_HOME/share/hadoop/mapreduce/hadoop-mapreduce-client-core-2.6.0.jar:$HADOOP_HOME/share/hadoop/common/lib/commons-cli-1.2.jar -d ./ *.java
+
+15. Create the jar file 
+
+jar -cvf testoozie.jar -C classfiles/ .
+Create ~/map-reduce
+Create ~/map-reduce/lib
+
+16. Create input directory /user/ubuntu/input on HDFS
+
+hdfs dfs -mkdir input 
+Copy job.properties and workflow.xml into ~/map-reduce
+Copy jar file into ~/map-reduce/lib
+Copy Flight data into HDFS (/user/ubuntu/input)
+Copy ~/map-reduce into HDFS 
+hdfs dfs -put ~/map-reduce map-reduce
+
+17. Run oozie
+oozie job -oozie http://localhost:11000/oozie -config ~/map-reduce/job.properties -run

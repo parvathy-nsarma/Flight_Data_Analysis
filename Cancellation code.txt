@@ -1,0 +1,1 @@
+A = carrier, B = weather, C = NAS (National Aviation System), D = security
